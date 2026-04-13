@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nearby Trail Finder</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="sidebar">
+    <div class="sidebar-handle"></div>
+    <h1>Nearby Trail Finder</h1>
+
+    <div id="auth-section">
+      <div id="auth-status" class="status-box">Comprobando conexión...</div>
+      <a id="connect-btn" href="/auth/strava" class="btn btn-strava hidden">Conectar con Strava</a>
+    </div>
+
+    <hr />
+
+    <div id="search-section">
+      <p class="hint">Haz clic en el mapa para seleccionar un punto de búsqueda.</p>
+
+      <div class="field-group">
+        <label for="radius-slider">Radio de búsqueda: <strong id="radius-label">500 m</strong></label>
+        <input type="range" id="radius-slider" min="100" max="10000" step="100" value="500" />
+      </div>
+
+      <div class="btn-row">
+        <button id="search-all-btn" class="btn btn-primary" disabled>Buscar todo</button>
+        <button id="clear-btn" class="btn btn-secondary hidden">Limpiar</button>
+      </div>
+    </div>
+
+    <hr />
+
+    <!-- Tabs -->
+    <div id="tabs">
+      <button class="tab-btn active" data-tab="strava">Mis rutas</button>
+      <button class="tab-btn" data-tab="trails">Sendas OSM</button>
+    </div>
+
+    <!-- Pestaña Strava -->
+    <div id="tab-strava" class="tab-panel">
+      <button id="search-strava-btn" class="btn btn-search-tab btn-strava-light" disabled>
+        Buscar mis rutas
+      </button>
+      <div id="results-summary" class="hidden"></div>
+      <ul id="results-list"></ul>
+    </div>
+
+    <!-- Pestaña Sendas OSM -->
+    <div id="tab-trails" class="tab-panel hidden">
+      <div class="trails-toolbar">
+        <button id="search-trails-btn" class="btn btn-search-tab btn-osm-light" disabled>
+          Buscar sendas
+        </button>
+        <button id="filter-btn" class="btn btn-filter-tab" title="Filtros">
+          <svg id="filter-icon-filled" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5z"/>
+          </svg>
+          <svg id="filter-icon-outline" width="14" height="14" viewBox="0 0 16 16" fill="currentColor" class="hidden">
+            <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5zM2.765 2l4.52 5.217a.5.5 0 0 1 .122.334v5.796l1-.333V7.551a.5.5 0 0 1 .122-.334L13.235 2z"/>
+          </svg>
+        </button>
+      </div>
+      <div id="trails-cache-info" class="cache-info hidden"></div>
+      <div id="trails-summary" class="hidden"></div>
+      <ul id="trails-list"></ul>
+    </div>
+  </div>
+
+  <div id="map"></div>
+  <button id="sidebar-toggle" class="sidebar-toggle-btn" aria-label="Controles">≡</button>
+
+  <!-- Modal de filtros -->
+  <div id="filter-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <span>Filtros de sendas (OSM)</span>
+        <button id="filter-close" class="modal-close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="filter-group">
+          <div class="filter-title">Tipo de vía</div>
+          <label class="chk"><input type="checkbox" name="highway" value="path"      checked /> Senda (path)</label>
+          <label class="chk"><input type="checkbox" name="highway" value="track"             /> Pista forestal (track)</label>
+          <label class="chk"><input type="checkbox" name="highway" value="footway"           /> Camino peatonal</label>
+          <label class="chk"><input type="checkbox" name="highway" value="bridleway"         /> Camino ecuestre</label>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-title">Dificultad — sac_scale</div>
+          <p class="filter-hint">Si la senda no tiene este dato en OSM, se muestra igualmente.</p>
+          <label class="chk"><input type="checkbox" name="sac_scale" value="hiking"                      /> T1 – Paseo fácil</label>
+          <label class="chk"><input type="checkbox" name="sac_scale" value="mountain_hiking"          checked /> T2 – Senderismo</label>
+          <label class="chk"><input type="checkbox" name="sac_scale" value="demanding_mountain_hiking" checked /> T3 – Montaña</label>
+          <label class="chk"><input type="checkbox" name="sac_scale" value="alpine_hiking"            checked /> T4 – Alpino</label>
+          <label class="chk"><input type="checkbox" name="sac_scale" value="demanding_alpine_hiking"  checked /> T5 – Alpino exigente</label>
+          <label class="chk"><input type="checkbox" name="sac_scale" value="difficult_alpine_hiking"  checked /> T6 – Alpino difícil</label>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-title">Calidad de pista — tracktype</div>
+          <p class="filter-hint">Solo aplica cuando se incluye "Pista forestal".</p>
+          <label class="chk"><input type="checkbox" name="tracktype" value="1" /> Grade 1 – Firme compacto</label>
+          <label class="chk"><input type="checkbox" name="tracktype" value="2" /> Grade 2 – Grava compacta</label>
+          <label class="chk"><input type="checkbox" name="tracktype" value="3" /> Grade 3 – Intermedia</label>
+          <label class="chk"><input type="checkbox" name="tracktype" value="4" checked /> Grade 4 – Tierra blanda</label>
+          <label class="chk"><input type="checkbox" name="tracktype" value="5" checked /> Grade 5 – Campo a través</label>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-title">Red señalizada</div>
+          <p class="filter-hint">Solo aplica a rutas con nombre (relaciones OSM).</p>
+          <label class="chk"><input type="checkbox" name="network" value="iwn" /> Internacional (GR europeo)</label>
+          <label class="chk"><input type="checkbox" name="network" value="nwn" /> Nacional (GR)</label>
+          <label class="chk"><input type="checkbox" name="network" value="rwn" /> Regional (PR)</label>
+          <label class="chk"><input type="checkbox" name="network" value="lwn" checked /> Local (SL)</label>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-title">Superficie</div>
+          <label class="chk"><input type="checkbox" name="surface" value="paved"     /> Paved — Asfalto / pavimento</label>
+          <label class="chk"><input type="checkbox" name="surface" value="unpaved"   checked /> Unpaved — Sin asfaltar</label>
+          <label class="chk"><input type="checkbox" name="surface" value="gravel"    checked /> Gravel — Grava</label>
+          <label class="chk"><input type="checkbox" name="surface" value="dirt"      checked /> Dirt — Tierra</label>
+          <label class="chk"><input type="checkbox" name="surface" value="grass"     checked /> Grass — Hierba</label>
+          <label class="chk"><input type="checkbox" name="surface" value="rock"      checked /> Rock — Roca</label>
+          <label class="chk"><input type="checkbox" name="surface" value="sand"      checked /> Sand — Arena</label>
+          <label class="chk"><input type="checkbox" name="surface" value="concrete"  checked /> Concrete — Hormigón</label>
+          <label class="chk"><input type="checkbox" name="surface" value="ground"    checked /> Ground — Suelo natural</label>
+          <label class="chk"><input type="checkbox" name="surface" value="compacted" checked /> Compacted — Tierra compacta</label>
+          <label class="chk"><input type="checkbox" name="surface" value="untagged"  checked /> Sin datos de superficie</label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="filter-reset" class="btn btn-secondary">Restablecer</button>
+        <button id="filter-apply" class="btn btn-primary">Aplicar filtros</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="hidden">
+    <div class="spinner"></div>
+    <span id="loading-msg">Buscando...</span>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+  <script src="/static/app.js?v=11"></script>
+</body>
+</html>

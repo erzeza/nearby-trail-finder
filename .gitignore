@@ -1,0 +1,17 @@
+# Secrets — never commit these
+.env
+.tokens.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dev artifacts
+icon-preview.html
