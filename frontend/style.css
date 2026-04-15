@@ -34,8 +34,69 @@ hr { border: none; border-top: 1px solid #eee; }
   background: #f5f5f5;
   color: #555;
 }
-.status-box.connected    { background: #e8f5e9; color: #2e7d32; }
-.status-box.disconnected { background: #fff3e0; color: #e65100; }
+.status-box.disconnected { background: #fff3e0; color: #e65100; text-align: center; }
+
+#auth-disconnected { display: flex; flex-direction: column; gap: 8px; }
+
+.athlete-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #fff8f6;
+  border: 1px solid #ffd5c8;
+  border-radius: 10px;
+}
+
+.athlete-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid #fc4c02;
+}
+
+.athlete-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.athlete-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.athlete-location {
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-disconnect {
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #e53935;
+  text-decoration: none;
+  transition: background 0.15s;
+  padding: 0;
+}
+.btn-disconnect:hover { background: #ffebee; }
 
 /* ── Buttons ── */
 .btn {

@@ -50,7 +50,9 @@
       "Bash(powershell -Command \"Stop-Process -Id 19796,19160,26252 -Force -ErrorAction SilentlyContinue; Write-Host done\")",
       "Bash(powershell -Command \"Get-Process -Id 19796,19160,26252 | Select-Object Id,Name,Path\")",
       "Bash(curl -s \"http://localhost:8001/api/trails?lat=42.548973873167434&lng=-2.389698028564453&radius=500\")",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(/c/Users/saizc/AppData/Local/Python/bin/python3 -m pip install itsdangerous)",
+      "Bash(powershell -Command \"Stop-Process -Name python3 -Force -ErrorAction SilentlyContinue; Stop-Process -Name python -Force -ErrorAction SilentlyContinue\")"
     ]
   }
 }

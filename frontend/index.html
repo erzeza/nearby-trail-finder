@@ -12,13 +12,6 @@
     <div class="sidebar-handle"></div>
     <h1>Nearby Trail Finder</h1>
 
-    <div id="auth-section">
-      <div id="auth-status" class="status-box">Comprobando conexión...</div>
-      <a id="connect-btn" href="/auth/strava" class="btn btn-strava hidden">Conectar con Strava</a>
-    </div>
-
-    <hr />
-
     <div id="search-section">
       <p class="hint">Haz clic en el mapa para seleccionar un punto de búsqueda.</p>
 
@@ -43,6 +36,29 @@
 
     <!-- Pestaña Strava -->
     <div id="tab-strava" class="tab-panel">
+      <div id="auth-section">
+        <!-- Estado: no conectado -->
+        <div id="auth-disconnected">
+          <div id="auth-status" class="status-box disconnected">No conectado con Strava</div>
+          <a href="/auth/strava" class="btn btn-strava">Conectar con Strava</a>
+        </div>
+        <!-- Estado: conectado -->
+        <div id="auth-connected" class="hidden">
+          <div class="athlete-card">
+            <img id="athlete-photo" src="" alt="" class="athlete-avatar" />
+            <div class="athlete-info">
+              <div id="athlete-name" class="athlete-name"></div>
+              <div id="athlete-location" class="athlete-location hidden"></div>
+            </div>
+            <a href="/auth/logout" class="btn-disconnect" title="Desconectar sesión">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+                <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
       <button id="search-strava-btn" class="btn btn-search-tab btn-strava-light" disabled>
         Buscar mis rutas
       </button>
@@ -151,6 +167,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
-  <script src="/static/app.js?v=11"></script>
+  <script src="/static/app.js?v=16"></script>
 </body>
 </html>

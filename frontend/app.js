@@ -160,10 +160,18 @@ async function doSearchStrava() {
     const data = await fetchNearby(lat, lng, radius);
     renderStravaResults(data.activities);
   } catch (e) {
-    const msg = e.message?.includes("401")
-      ? "Conecta con Strava para ver tus rutas."
-      : `Error Strava: ${e.message}`;
-    showSummary("results-summary", msg);
+    const summary = document.getElementById("results-summary");
+    if (e.message?.includes("401")) {
+      summary.innerHTML = `
+        Para ver tus rutas necesitas conectar tu cuenta de Strava.<br>
+        <a href="/auth/strava" class="btn btn-strava" style="display:inline-block;margin-top:8px;width:auto;padding:8px 16px;">
+          Conectar con Strava
+        </a>`;
+      summary.classList.remove("hidden");
+      showClearBtn();
+    } else {
+      showSummary("results-summary", `Error Strava: ${e.message}`);
+    }
   }
 }
 
@@ -627,19 +635,27 @@ async function checkAuthStatus() {
   try {
     const res  = await fetch("/api/status");
     const data = await res.json();
-    const box  = document.getElementById("auth-status");
-    const btn  = document.getElementById("connect-btn");
     if (data.authenticated) {
-      box.textContent = `Conectado como ${data.athlete_name}`;
-      box.className = "status-box connected";
-      btn.classList.add("hidden");
+      document.getElementById("auth-disconnected").classList.add("hidden");
+      document.getElementById("auth-connected").classList.remove("hidden");
+      document.getElementById("athlete-name").textContent = data.athlete_name;
+      console.log("[auth] athlete_photo:", data.athlete_photo);
+      const photoEl = document.getElementById("athlete-photo");
+      if (data.athlete_photo) {
+        photoEl.src = data.athlete_photo;
+        photoEl.onerror = () => { photoEl.src = ""; photoEl.style.display = "none"; };
+      }
+      const locEl = document.getElementById("athlete-location");
+      if (data.athlete_location) {
+        locEl.textContent = "📍 " + data.athlete_location;
+        locEl.classList.remove("hidden");
+      }
     } else {
-      box.textContent = "No conectado con Strava";
-      box.className = "status-box disconnected";
-      btn.classList.remove("hidden");
+      document.getElementById("auth-disconnected").classList.remove("hidden");
+      document.getElementById("auth-connected").classList.add("hidden");
     }
   } catch {
-    document.getElementById("auth-status").textContent = "Error al comprobar conexión";
+    /* silencioso */
   }
 }
 
