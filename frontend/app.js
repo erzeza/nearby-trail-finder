@@ -24,38 +24,105 @@ let routeColors    = [];   // color de cada ruta (mismo índice que routeLayers)
 let directionLayers = [];  // marcadores inicio/fin + decorator de la ruta activa
 let trailLayers    = [];
 let highlightLayer = null;
+let trailLabelLayer = null;
+let activeTrailLi   = null;
 let allTrails      = [];
 let trailsLoaded   = false;
 
-// ── Control "Centrar mapa" (Leaflet, bajo los botones de zoom) ──
+// ── Control "Centrar en punto seleccionado" ──
 const CenterControl = L.Control.extend({
-  options: { position: "topleft" },
+  options: { position: "topright" },
   onAdd() {
-    const btn = L.DomUtil.create("button", "leaflet-bar leaflet-control center-map-ctrl");
-    btn.innerHTML = "⊕";
-    btn.title = "Centrar en el punto seleccionado";
-    btn.disabled = true;
-    L.DomEvent.on(btn, "click", (e) => {
+    const container = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+    const a = L.DomUtil.create("a", "map-ctrl-btn", container);
+    a.href = "#";
+    a.title = "Centrar en el punto seleccionado";
+    a.innerHTML = `<svg width="26" height="26" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+    </svg>`;
+    L.DomEvent.on(a, "click", (e) => {
+      L.DomEvent.preventDefault(e);
       L.DomEvent.stopPropagation(e);
+      if (!this._enabled) return;
       if (circleLayer) map.fitBounds(circleLayer.getBounds().pad(0.1));
       else if (markerLayer) map.setView(markerLayer.getLatLng(), 13);
     });
-    this._btn = btn;
-    return btn;
+    this._a = a;
+    this.setEnabled(false);
+    return container;
   },
-  setEnabled(enabled) { this._btn.disabled = !enabled; },
+  setEnabled(enabled) {
+    this._enabled = enabled;
+    this._a.style.color  = enabled ? "#2979ff" : "#bbb";
+    this._a.style.cursor = enabled ? "pointer"  : "not-allowed";
+  },
+});
+
+// ── Control "Centrar en GPS" ──
+const GpsControl = L.Control.extend({
+  options: { position: "topright" },
+  onAdd() {
+    const container = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+    const a = L.DomUtil.create("a", "map-ctrl-btn", container);
+    a.href = "#";
+    a.title = "Centrar en mi posición GPS";
+    a.innerHTML = `<svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8 0a.5.5 0 0 1 .5.5v.518A7 7 0 0 1 14.982 7.5h.518a.5.5 0 0 1 0 1h-.518A7 7 0 0 1 8.5 14.982v.518a.5.5 0 0 1-1 0v-.518A7 7 0 0 1 1.018 8.5H.5a.5.5 0 0 1 0-1h.518A7 7 0 0 1 7.5.518V.5A.5.5 0 0 1 8 0zm0 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zm0 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+    </svg>`;
+    L.DomEvent.on(a, "click", (e) => {
+      L.DomEvent.preventDefault(e);
+      L.DomEvent.stopPropagation(e);
+      tryGeolocation();
+    });
+    return container;
+  },
 });
 
 // ── Mapa ──
 function initMap() {
-  map = L.map("map", { zoomControl: true }).setView([40.4168, -3.7038], 6);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  map = L.map("map", { zoomControl: false }).setView([40.4168, -3.7038], 6);
+  L.control.zoom({ position: "topright" }).addTo(map);
+
+  const layerOSM = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19,
-  }).addTo(map);
+    tileSize: 512,
+    zoomOffset: -1,
+  });
+
+  const layerTopo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+    attribution: '© <a href="https://opentopomap.org">OpenTopoMap</a>',
+    maxZoom: 17,
+  });
+
+  const layerCarto = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    attribution: '© <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 19,
+  });
+
+  layerOSM.addTo(map);
+
+  const layersCtrl = L.control.layers(
+    { "OpenStreetMap": layerOSM, "OpenTopoMap": layerTopo, "CartoDB Voyager": layerCarto },
+    {},
+    { position: "topright", collapsed: true }
+  ).addTo(map);
+
+  // Abrir/cerrar con click (no con hover)
+  const lc = layersCtrl._container;
+  lc.addEventListener("mouseenter", (e) => e.stopImmediatePropagation(), true);
+  lc.addEventListener("mouseleave", (e) => e.stopImmediatePropagation(), true);
+  lc.querySelector(".leaflet-control-layers-toggle").addEventListener("click", (e) => {
+    e.stopPropagation();
+    lc.classList.contains("leaflet-control-layers-expanded")
+      ? layersCtrl.collapse()
+      : layersCtrl.expand();
+  });
+  map.on("click", () => layersCtrl.collapse());
 
   window.centerControl = new CenterControl();
   centerControl.addTo(map);
+  new GpsControl().addTo(map);
 
   map.on("click", onMapClick);
 }
@@ -433,7 +500,7 @@ function renderTrailResults(trails) {
         ${badge}
       </div>
       <a href="${trail.osm_url}" target="_blank" rel="noopener">Ver en OSM ↗</a>`;
-    if (layer) li.addEventListener("click", () => focusTrailLayer(layer, li, color));
+    if (layer) li.addEventListener("click", () => focusTrailLayer(layer, li, color, displayName));
     list.appendChild(li);
   });
 }
@@ -542,28 +609,71 @@ function focusLayer(layer, li, selector) {
   if (layer?.getBounds) { map.fitBounds(layer.getBounds().pad(0.15)); layer.openPopup?.(); }
 }
 
-function focusTrailLayer(layer, li, color) {
+function focusTrailLayer(layer, li, color, trailName) {
+  // Toggle: click same trail again → deselect
+  if (li === activeTrailLi) {
+    document.querySelectorAll(".trail-item").forEach((el) => el.classList.remove("active"));
+    clearHighlight();
+    activeTrailLi = null;
+    return;
+  }
+
   document.querySelectorAll(".trail-item").forEach((el) => el.classList.remove("active"));
   li.classList.add("active");
+  activeTrailLi = li;
   clearHighlight();
 
+  let allCoords = [];
+
   if (layer?.getBounds) {
-    highlightLayer = L.polyline(layer.getLatLngs(),
+    const latlngs = layer.getLatLngs();
+    highlightLayer = L.polyline(latlngs,
       { color, weight: 9, opacity: 0.45, lineCap: "round", lineJoin: "round" }).addTo(map);
     map.fitBounds(layer.getBounds().pad(0.15));
+    allCoords = latlngs;
   } else if (layer?.getLayers) {
+    const sublayers = layer.getLayers();
     highlightLayer = L.layerGroup(
-      layer.getLayers().map((l) =>
+      sublayers.map((l) =>
         L.polyline(l.getLatLngs(), { color, weight: 9, opacity: 0.45, lineCap: "round", lineJoin: "round" })
       )
     ).addTo(map);
-    const bounds = L.featureGroup(layer.getLayers()).getBounds();
+    const bounds = L.featureGroup(sublayers).getBounds();
     if (bounds.isValid()) map.fitBounds(bounds.pad(0.15));
+    allCoords = sublayers.flatMap((l) => l.getLatLngs());
+  }
+
+  // Label at midpoint (only if the trail has a real name)
+  if (trailName && trailName !== "Sin nombre" && allCoords.length > 0) {
+    const mid = allCoords[Math.floor(allCoords.length / 2)];
+    const labelIcon = L.divIcon({
+      html: `<div style="
+        display: inline-block;
+        transform: translate(-50%, -50%);
+        background: rgba(255,255,255,0.93);
+        color: #1b5e20;
+        font-weight: 700;
+        font-size: 26px;
+        padding: 5px 12px;
+        border-radius: 6px;
+        border: 2px solid ${color};
+        box-shadow: 0 2px 8px rgba(0,0,0,0.30);
+        white-space: nowrap;
+        pointer-events: none;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        line-height: 1.2;
+      ">${trailName}</div>`,
+      className: "",
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+    trailLabelLayer = L.marker(mid, { icon: labelIcon, interactive: false, zIndexOffset: 1000 }).addTo(map);
   }
 }
 
 function clearHighlight() {
-  if (highlightLayer) { highlightLayer.remove(); highlightLayer = null; }
+  if (highlightLayer)  { highlightLayer.remove();  highlightLayer  = null; }
+  if (trailLabelLayer) { trailLabelLayer.remove(); trailLabelLayer = null; }
 }
 
 // ── Limpiar ──
@@ -579,6 +689,7 @@ function clearStravaResults() {
 function clearTrailLayers() {
   trailLayers.forEach((l) => l.remove()); trailLayers = [];
   clearHighlight();
+  activeTrailLi = null;
 }
 
 function clearTrailResults() {

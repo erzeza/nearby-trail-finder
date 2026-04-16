@@ -287,23 +287,25 @@ input[type="range"] { width: 100%; accent-color: #2979ff; }
 /* ── Map ── */
 #map { flex: 1; height: 100vh; cursor: crosshair; }
 
-/* ── Control centrar mapa (Leaflet, bajo el zoom) ── */
-.center-map-ctrl {
-  width: 30px;
-  height: 30px;
-  font-size: 18px;
-  font-weight: bold;
-  line-height: 30px;
-  text-align: center;
-  background: #fff;
-  color: #2979ff;
-  cursor: pointer;
-  border: none;
-  display: block;
-  padding: 0;
+/* ── Tamaño uniforme de todos los controles del mapa ── */
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+  width: 34px !important;
+  height: 34px !important;
+  line-height: 34px !important;
 }
-.center-map-ctrl:disabled { color: #aaa; cursor: default; }
-.center-map-ctrl:not(:disabled):hover { background: #f0f4ff; }
+
+/* Centrar icono SVG en los <a> de leaflet-bar (zoom + custom) */
+.leaflet-bar a {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Botones custom (centrar en punto + GPS): heredan tamaño de .leaflet-bar a */
+.map-ctrl-btn {
+  color: #2979ff;
+}
 
 /* ── Modal ── */
 .modal-backdrop {
